@@ -1,0 +1,15 @@
+[package]
+name = "sdhash-rs"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Vassil Roussev <sdhash@roussev.net>", "Richard Zak <richard.j.zak@gmail.com>"]
+description = "similarity digest hashing tool"
+homepage = "https://www.sdhash.org/"
+repository = "https://github.com/malwaredb/sdhash-rs"
+categories = ["algorithms"]
+
+[dependencies]
+bytemuck = "1.13.1"
+lazy_static = "1.4.0"
+sha1 = { version = "0.10.5", features = ["std"] }

@@ -1,0 +1,41 @@
+
+INSTALL for sdhash 1.71
+
+SHORT VERSION on Linux:
+
+Check for openssl-devel (fedora) or libssl-dev (ubuntu) package.  
+
+make
+make install (as root) 
+
+REQUIREMENTS
+
+openssl development libraries.
+pthreads development library
+gcc that supports C99 (>=3.0)
+
+CYGWIN
+
+Install cygwin by downloading setup.exe from www.cygwin.com
+
+Run setup.exe and choose the following packages when you
+get to the package selection screen.  They are in the "Devel" category.
+
+Devel->
+    gcc-core
+    libpth-devel
+    make
+    openssl-devel
+
+Once it's all installed, open up a cygwin terminal, go to the source
+(often something like cd /cygdrive/c/Users/user/Downloads in say Win7)
+
+tar zxvf sdhash-1.7.tar.gz
+cd sdhash-1.7
+make
+make install
+
+OTHER STUFF
+
+See manpage for usage of sdhash.  By default we install into /usr/local/bin
+and this can be changed in the Makefile.
