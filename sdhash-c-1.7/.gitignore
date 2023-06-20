@@ -1,0 +1,4 @@
+*.o
+sdhash
+sdhash-dd
+sdhash-mem

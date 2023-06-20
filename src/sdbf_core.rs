@@ -195,6 +195,8 @@ pub fn gen_chunk_sdbf(file_buffer: &[u8], file_size: u64, chunk_size: u64, sdbf:
     let mut chunk_pos = 0;
     let mut chunk_ranks: Vec<u16> = Vec::new();
     let mut chunk_scores: Vec<u16> = Vec::new();
+    chunk_ranks.resize(chunk_size as usize, 0);
+    chunk_scores.resize(chunk_size as usize, 0);
     // uint16_t *chunk_ranks = (uint16_t *)alloc_check( ALLOC_ONLY, (chunk_size)*sizeof( uint16_t), "gen_chunk_sdbf", "chunk_ranks", ERROR_EXIT);
     // uint16_t *chunk_scores = (uint16_t *)alloc_check( ALLOC_ZERO, (chunk_size)*sizeof( uint16_t), "gen_chunk_sdbf", "chunk_scores", ERROR_EXIT);
 
@@ -248,5 +250,89 @@ pub fn gen_chunk_sdbf(file_buffer: &[u8], file_size: u64, chunk_size: u64, sdbf:
     if ((sdbf.bf_count * sdbf.bf_size) as u64) < buff_size {
         sdbf.buffer = sdbf.buffer[..(sdbf.bf_count * sdbf.bf_size) as usize].to_owned();
         //sdbf.buffer = realloc_check( sdbf->buffer, (sdbf->bf_count*sdbf->bf_size));
+    }
+}
+
+/// Generate SDBF hash for a buffer--block version.
+pub fn gen_block_sdbf(file_buffer: &[u8], file_size: u64, block_size: u64, sdbf: &mut Sdbf) {
+    let mut sum = 0;
+    let mut allowed = 0i32;
+
+    let mut score_histo = [0i32; 66]; // Score histogram
+
+    // Block-based computation
+    let qt = file_size / block_size;
+    let rem = file_size % block_size;
+
+    let mut chunk_pos = 0u64;
+    let mut chunk_ranks: Vec<u16> = Vec::new();
+    let mut chunk_scores: Vec<u16> = Vec::new();
+    chunk_ranks.resize(block_size as usize, 0);
+    chunk_scores.resize(block_size as usize, 0);
+    //uint16_t *chunk_ranks = (uint16_t *)alloc_check( ALLOC_ONLY, (block_size)*sizeof( uint16_t), "gen_block_sdbf", "chunk_ranks", ERROR_EXIT);
+    //uint16_t *chunk_scores = (uint16_t *)alloc_check( ALLOC_ZERO, (block_size)*sizeof( uint16_t), "gen_block_sdbf", "chunk_scores", ERROR_EXIT);
+
+    for i in 0..qt {
+        gen_chunk_ranks(
+            &file_buffer[(block_size * i) as usize..],
+            block_size,
+            &mut chunk_ranks,
+            0,
+        );
+        score_histo.iter_mut().for_each(|m| *m = 0);
+        gen_chunk_scores(
+            &chunk_ranks,
+            block_size,
+            &mut chunk_scores,
+            Some(&mut score_histo),
+        );
+
+        // Calculate thresholding paremeters
+        let mut k = 65;
+        loop {
+            if sum <= SDBF_SYS.max_elem && sum as i32 + score_histo[k] > SDBF_SYS.max_elem as i32 {
+                break;
+            }
+            sum += score_histo[k] as u32;
+            k -= 1;
+            if k <= SDBF_SYS.threshold as usize {
+                break;
+            }
+        }
+        allowed = (SDBF_SYS.max_elem - sum) as i32;
+        gen_block_hash(
+            file_buffer,
+            file_size,
+            i,
+            &chunk_scores,
+            block_size,
+            sdbf,
+            0,
+            k as u32,
+            allowed,
+        );
+
+        chunk_pos += block_size
+    }
+
+    if rem >= crate::MIN_FILE_SIZE as u64 {
+        gen_chunk_ranks(
+            &file_buffer[(block_size * qt) as usize..],
+            rem,
+            &mut chunk_ranks,
+            0,
+        );
+        gen_chunk_scores(&chunk_ranks, rem, &mut chunk_scores, None);
+        gen_block_hash(
+            file_buffer,
+            file_size,
+            qt,
+            &chunk_scores,
+            block_size,
+            sdbf,
+            rem as u32,
+            SDBF_SYS.threshold as u32,
+            SDBF_SYS.max_elem as i32,
+        );
     }
 }

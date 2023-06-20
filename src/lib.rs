@@ -4,6 +4,13 @@ pub(crate) mod bf_utils;
 pub(crate) mod entr64;
 pub(crate) mod sdbf_core;
 
+use crate::sdbf_core::{gen_block_sdbf, gen_chunk_sdbf};
+
+use std::fmt::{Display, Formatter};
+use std::path::PathBuf;
+
+use anyhow::{bail, Result};
+use base64::{display::Base64Display, engine::general_purpose::STANDARD};
 use lazy_static::lazy_static;
 
 const _MAX_ELEM_COUNT: u32 = 192;
@@ -118,6 +125,64 @@ impl Sdbf {
             }
         }
     }
+
+    pub fn sdbf_hashfile(path: &PathBuf, dd_block_size: u32) -> Result<Self> {
+        if !path.is_file() {
+            bail! {"{path:?} is not a file"};
+        }
+
+        let fname = path.file_name().unwrap().to_str().unwrap().to_string();
+        let mut temp = Sdbf::new(fname);
+
+        let contents = std::fs::read(path)?;
+
+        if dd_block_size < 2 {
+            // Stream-mode fork
+            gen_chunk_sdbf(
+                &contents,
+                contents.len() as u64,
+                (32 * MB) as u64,
+                &mut temp,
+            );
+        } else {
+            // Block-mode fork
+            let mut dd_block_cnt = contents.len() / dd_block_size as usize;
+            if contents.len() % dd_block_size as usize >= MIN_FILE_SIZE {
+                dd_block_cnt += 1;
+            }
+            temp.bf_count = dd_block_cnt as u32;
+            temp.dd_block_size = dd_block_size;
+            temp.buffer.resize(dd_block_cnt, 0);
+            //sdbf->buffer = (uint8_t *)alloc_check( ALLOC_ZERO, dd_block_cnt*sdbf_sys.bf_size, "sdbf_hash_dd", "sdbf->buffer", ERROR_EXIT);
+            temp.elem_counts.resize(dd_block_cnt, 0);
+            //sdbf->elem_counts = (uint16_t *)alloc_check( ALLOC_ZERO, sizeof( uint16_t)*dd_block_cnt, "sdbf_hash_dd", "sdbf->elem_counts", ERROR_EXIT);
+            gen_block_sdbf(
+                &contents,
+                contents.len() as u64,
+                dd_block_size as u64,
+                &mut temp,
+            );
+        }
+
+        Ok(temp)
+    }
+}
+
+impl Display for Sdbf {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} sdbf:sha1:{}:{}:{:02x}:{}:{}:{}:{}",
+            self.name,
+            self.bf_size,
+            self.hash_count,
+            self.mask,
+            self.max_elem,
+            self.bf_count,
+            self.last_count,
+            Base64Display::new(&self.buffer, &STANDARD),
+        )
+    }
 }
 
 /// SDHASH global parameters
@@ -218,3 +283,21 @@ pub(crate) const BITS: [u8; 8] = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 
 pub(crate) const BF_CLASS_MASKS: [u32; 6] =
     [0x7FF, 0x7FFF, 0x7FFFF, 0x7FFFFF, 0x7FFFFFF, 0xFFFFFFFF];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Context;
+
+    const RANDOM_FILE: &str = "testdata/random.bin";
+    const RANDOM_SDHASH: &str = "sdbf:02:22:testdata/random.bin:sha1:256:5:7ff:160:1:80:AngBAEAASIAYAAMiAEghwAEgJAAgABAAkIQIAAE5yQANRA0vFDACABVeghEQQJJCBAIgAQfAIIASAYJACgKYBAaRAwARQAFBAAQBEIWAAAIACAGNgESJgBBBAJgAYMCABQAAAkgBAkIBKACESkBAUIAgA4HAECAmBQApAFBUiMQAmBAQQAFQAAbAABBBBBEQCCAhEMAIBIJwIEEICCkCADAsKAIigAIgABAAwAAAAiACBQAkCAQIwACAyAABDAkBAEAUAQSxASBACAgjCgEACEAIAyAKAABAAhBAQQqAAIQBAAEACBAAKAEAQwACsALAMIKQgCEQMRACCHAIgIgmiA==";
+
+    #[test]
+    fn random_file() {
+        let path = std::path::PathBuf::from(RANDOM_FILE);
+        let sdbf = Sdbf::sdbf_hashfile(&path, 0)
+            .context("failed to calculate SDHash for random.bin")
+            .unwrap();
+        assert_eq!(sdbf.to_string(), RANDOM_SDHASH);
+    }
+}
