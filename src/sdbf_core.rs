@@ -14,7 +14,6 @@ pub fn gen_chunk_ranks(
     chunk_ranks: &mut [u16],
     carryover: u16,
 ) {
-    let mut offset = 0;
     let mut entropy = 0;
     let mut ascii: entr64::ASCII = [0u8; 256];
 
@@ -27,7 +26,7 @@ pub fn gen_chunk_ranks(
         .skip(carryover as usize)
         .for_each(|m| *m = 0);
 
-    for offset in 0..SDBF_SYS.entr_win_size as usize {
+    for offset in 0..chunk_size as usize - SDBF_SYS.entr_win_size as usize {
         // Initial/sync entropy calculation
         if offset % SDBF_SYS.block_size as usize == 0 {
             entropy = entr64::entr64_init_int(&file_buffer[offset..], &mut ascii);
@@ -184,7 +183,7 @@ pub fn gen_chunk_sdbf(file_buffer: &[u8], file_size: u64, chunk_size: u64, sdbf:
     //uint32_t i, k, sum, allowed;
     let mut score_histo = [0i32; 66]; // Score histogram
     let buff_size = ((file_size >> 11) + 1) << 8; // Estimate sdbf size (reallocate later)
-    let buff_size = buff_size.min(256); // Ensure min size
+    let buff_size = buff_size.max(256); // Ensure min size
     sdbf.buffer = Vec::new();
     sdbf.buffer.resize(buff_size as usize, 0);
 
