@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 
-pub type ASCII = [u8; 256];
+pub type Ascii = [u8; 256];
 
 lazy_static! {
     /// Entropy lookup table setup--int64 version (to be called once)
@@ -16,12 +16,12 @@ lazy_static! {
 }
 
 #[inline]
-pub fn clear_ascii(ascii: &mut ASCII) {
+pub fn clear_ascii(ascii: &mut Ascii) {
     ascii.iter_mut().for_each(|m| *m = 0)
 }
 
 /// Baseline entropy computation for a 64-byte buffer--int64 version (to be called periodically)
-pub fn entr64_init_int(buffer: &[u8], ascii: &mut ASCII) -> u64 {
+pub fn entr64_init_int(buffer: &[u8], ascii: &mut Ascii) -> u64 {
     clear_ascii(ascii);
 
     for i in 0..64 {
@@ -39,7 +39,7 @@ pub fn entr64_init_int(buffer: &[u8], ascii: &mut ASCII) -> u64 {
 }
 
 /// Incremental (rolling) update to entropy computation--int64 version
-pub fn entr64_inc_int(prev_entropy: u64, buffer: &[u8], ascii: &mut ASCII) -> u64 {
+pub fn entr64_inc_int(prev_entropy: u64, buffer: &[u8], ascii: &mut Ascii) -> u64 {
     if buffer[0] == buffer[64] {
         return prev_entropy;
     }

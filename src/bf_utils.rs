@@ -59,7 +59,7 @@ pub fn bf_bitcount(bfilter_1: &[u8], bfilter_2: &[u8], bf_size: usize) -> u32 {
     let f2_64 = try_cast_slice::<u8, u64>(bfilter_2)
         .expect("bf_bitcount(): failed to convert &[u8] to &[u64]");
 
-    let mut buff64 = try_cast_slice_mut::<u16, u64>(&mut buff16)
+    let mut buff64 = try_cast_slice_mut::<u16, u64>(buff16)
         .expect("bf_bitcount(): failed to convert &[u16] back to to &[u64]");
 
     for i in 0..bf_size / 8 {

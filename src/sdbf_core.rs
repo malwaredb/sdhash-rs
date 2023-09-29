@@ -15,7 +15,7 @@ pub fn gen_chunk_ranks(
     carryover: u16,
 ) {
     let mut entropy = 0;
-    let mut ascii: entr64::ASCII = [0u8; 256];
+    let mut ascii: entr64::Ascii = [0u8; 256];
 
     if carryover > 0 {
         chunk_ranks.rotate_left(carryover as usize);
