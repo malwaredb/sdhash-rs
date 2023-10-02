@@ -10,14 +10,19 @@ SDHASH_SRC = sdhash_opts.c sdbf_api.c sdbf_core.c map_file.c entr64.c base64.c b
 CC = gcc
 LD = gcc
 
+UNAME_S := $(shell uname -s)
+
 # BAD, BAD OPTIMIZATION! -fstrict-aliasing 
 ifneq ($(MAKECMDGOALS),debug)
-CFLAGS = -std=c99 -O3 -fno-strict-aliasing -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE_API -D_BSD_SOURCE -I/opt/homebrew/Cellar/openssl@3/3.1.1/include/
+CFLAGS = -std=c99 -O3 -fno-strict-aliasing -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE_API -D_BSD_SOURCE -I`brew --prefix openssl`/include/
 else
-CFLAGS = -std=c99 -O0 -g -pg -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE_API -D_BSD_SOURCE -I/opt/homebrew/Cellar/openssl@3/3.1.1/include/
+CFLAGS = -std=c99 -O0 -g -pg -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE_API -D_BSD_SOURCE -I`brew --prefix openssl`/include/
 endif
 
-LDFLAGS = -lc -lm -lpthread /opt/homebrew/Cellar/openssl@3/3.1.1/lib/libcrypto.a
+LDFLAGS = -lc -lm -lpthread
+ifeq ($(UNAME_S),Darwin)
+	LDFLAGS += `brew --prefix openssl`/lib/libcrypto.a
+endif
 
 SDHASH_OBJ = $(SDHASH_SRC:.c=.o)
 SDHASH_CLIENT_OBJ = sdhash.o
