@@ -1,6 +1,6 @@
 This is an attempt to re-write [SDHash](http://roussev.net/sdhash/sdhash.html) into Rust! Initially, I was thinking to use Rust's `bindgen`, but this SDHash source depends on OpenSSL, which I don't wish to add as a dependency.
 
-This is an active work-in-progress, and has not been tested at all. I expect it to be riddled with bugs.
+**Help wanted! This project doesn't work. If this is of interest, please get in touch!**
 
 The copy of the SDHash C code in this project is not used by the Rust code, it's here as a reference as the code is translated into Rust. The goal is to re-implement the following features:
 * File or byte array to SDHash
